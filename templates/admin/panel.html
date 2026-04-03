@@ -39,7 +39,7 @@
     box-shadow: 3px 3px 0 #07050f;
   }
 
-  .back-btn {
+  .logout-btn {
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -47,15 +47,15 @@
     background: #1a1728;
     border: 3px solid #3a3650;
     border-radius: 10px;
-    color: #8880cc;
+    color: #6a6485;
     font-size: 13px;
     font-weight: 900;
     text-decoration: none;
     box-shadow: 3px 3px 0 #07050f;
     transition: box-shadow 0.1s, transform 0.1s;
   }
-  .back-btn:hover { box-shadow: 4px 4px 0 #07050f; transform: translate(-1px,-1px); color: #c5c0ff; }
-  .back-btn:active { box-shadow: 1px 1px 0 #07050f; transform: translate(2px,2px); }
+  .logout-btn:hover { box-shadow: 4px 4px 0 #07050f; transform: translate(-1px,-1px); color: #e84855; }
+  .logout-btn:active { box-shadow: 1px 1px 0 #07050f; transform: translate(2px,2px); }
 
   .stat-row {
     max-width: 1000px;
@@ -339,7 +339,7 @@
 
   <div class="admin-header">
     <h1><span>ADMIN</span> User Management</h1>
-    <a href="{{ url_for('dashboard') }}" class="back-btn">&#8592; Dashboard</a>
+    <a href="{{ url_for('logout') }}" class="logout-btn">Sign out</a>
   </div>
 
   <div class="env-note">

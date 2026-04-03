@@ -231,6 +231,20 @@ def _sync_admin_user():
 
 
 # ---------------------------------------------------------------------------
+# Admin gate — admin accounts can only reach admin routes
+# ---------------------------------------------------------------------------
+
+
+@app.before_request
+def restrict_admin_to_admin_routes():
+    if not current_user.is_authenticated or not current_user.is_admin:
+        return
+    allowed = {"admin_panel", "admin_edit_user", "admin_delete_user", "logout", "static"}
+    if request.endpoint not in allowed:
+        return redirect(url_for("admin_panel"))
+
+
+# ---------------------------------------------------------------------------
 # Auth routes
 # ---------------------------------------------------------------------------
 
