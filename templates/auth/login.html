@@ -126,6 +126,21 @@
   }
   .divider-text a:hover { color: #c5c0ff; }
 
+  .disclaimer {
+    margin-top: 20px;
+    padding: 12px 14px;
+    background: #13111f;
+    border: 2px solid #2e2a45;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #4a4465;
+    line-height: 1.5;
+  }
+  .disclaimer strong { color: #6a6485; }
+  .disclaimer a { color: #6258a8; text-decoration: none; }
+  .disclaimer a:hover { color: #8880cc; }
+
   /* Fun submit button */
   .submit-btn {
     width: 100%;
@@ -171,9 +186,9 @@
       <form method="POST" action="{{ url_for('login') }}" novalidate>
 
         <div class="field">
-          <label class="ct-label">Email</label>
-          <input type="email" name="email" required autocomplete="email"
-            class="ct-input" placeholder="you@example.com">
+          <label class="ct-label">Email or Username</label>
+          <input type="text" name="email" required autocomplete="username"
+            class="ct-input" placeholder="you@example.com or username">
         </div>
 
         <div class="field">
@@ -196,6 +211,12 @@
       <p class="divider-text">
         No account yet? <a href="{{ url_for('signup') }}">Create one free</a>
       </p>
+
+      <div class="disclaimer">
+        <strong>Heads up:</strong> This is a personal side project — you're welcome to use it, but for the best experience consider
+        <a href="https://github.com/dx4956s/TaskStream" target="_blank" rel="noopener">cloning the repo</a>
+        and hosting your own instance. No guarantees on uptime or data retention.
+      </div>
     </div>
 
   </div>

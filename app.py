@@ -1,5 +1,6 @@
 import json
 import os
+from functools import wraps
 
 from dotenv import load_dotenv
 
@@ -78,6 +79,7 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
     recovery_code_hash = db.Column(db.String(256), nullable=True)
+    is_admin = db.Column(db.Boolean, default=False, nullable=False, server_default="0")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     owned_projects = db.relationship(
@@ -176,6 +178,58 @@ def load_user(user_id):
     return db.session.get(User, int(user_id))
 
 
+def admin_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not current_user.is_authenticated or not current_user.is_admin:
+            abort(403)
+        return f(*args, **kwargs)
+    return decorated
+
+
+def _sync_admin_user():
+    """Create or recreate the admin user from ADMIN_USER / ADMIN_PASS env vars.
+
+    If either var is missing, no admin account is managed.
+    If the credentials changed since last startup, the old admin is deleted
+    (along with any projects they owned) and a fresh one is created.
+    """
+    admin_user_env = os.environ.get("ADMIN_USER", "").strip()
+    admin_pass_env = os.environ.get("ADMIN_PASS", "").strip()
+
+    if not admin_user_env or not admin_pass_env:
+        return
+
+    existing = User.query.filter_by(is_admin=True).first()
+
+    if existing:
+        if existing.username == admin_user_env and existing.check_password(admin_pass_env):
+            return  # Nothing changed
+        # Credentials changed — tear down the old admin account
+        for project in list(existing.owned_projects):
+            db.session.delete(project)
+        ProjectMember.query.filter_by(user_id=existing.id).delete()
+        db.session.delete(existing)
+        db.session.flush()
+
+    # Remove any regular user that would collide on username
+    conflict = User.query.filter(
+        User.username == admin_user_env, User.is_admin == False  # noqa: E712
+    ).first()
+    if conflict:
+        for project in list(conflict.owned_projects):
+            db.session.delete(project)
+        ProjectMember.query.filter_by(user_id=conflict.id).delete()
+        db.session.delete(conflict)
+        db.session.flush()
+
+    admin_email = f"__admin_{admin_user_env}__@system.local"
+    admin = User(username=admin_user_env, email=admin_email, is_admin=True)
+    admin.set_password(admin_pass_env)
+    db.session.add(admin)
+    db.session.commit()
+
+
 # ---------------------------------------------------------------------------
 # Auth routes
 # ---------------------------------------------------------------------------
@@ -228,19 +282,29 @@ def signup():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if current_user.is_authenticated:
+        if current_user.is_admin:
+            return redirect(url_for("admin_panel"))
         return redirect(url_for("dashboard"))
 
     if request.method == "POST":
-        email = request.form.get("email", "").strip().lower()
+        identifier = request.form.get("email", "").strip()
         password = request.form.get("password", "")
         remember = bool(request.form.get("remember"))
 
-        user = User.query.filter_by(email=email).first()
+        # Accept either email or username (case-insensitive)
+        user = User.query.filter(
+            db.or_(
+                User.email == identifier.lower(),
+                db.func.lower(User.username) == identifier.lower(),
+            )
+        ).first()
         if user and user.check_password(password):
             login_user(user, remember=remember)
             next_page = request.args.get("next")
+            if user.is_admin and not next_page:
+                return redirect(url_for("admin_panel"))
             return redirect(next_page or url_for("dashboard"))
-        flash("Invalid email or password.", "error")
+        flash("Invalid credentials.", "error")
 
     return render_template("auth/login.html")
 
@@ -305,6 +369,10 @@ def forgot_password():
 @app.route("/settings/password", methods=["GET", "POST"])
 @login_required
 def change_password():
+    if current_user.is_admin:
+        flash("Admin credentials are managed via environment variables.", "error")
+        return redirect(url_for("admin_panel"))
+
     if request.method == "POST":
         current_pw = request.form.get("current_password", "")
         new_pw = request.form.get("new_password", "")
@@ -656,10 +724,104 @@ def remove_member(project_id, user_id):
 
 
 # ---------------------------------------------------------------------------
+# Admin panel
+# ---------------------------------------------------------------------------
+
+
+@app.route("/admin")
+@login_required
+@admin_required
+def admin_panel():
+    users = User.query.order_by(User.created_at.desc()).all()
+    return render_template("admin/panel.html", users=users)
+
+
+@app.route("/admin/user/<int:user_id>/edit", methods=["POST"])
+@login_required
+@admin_required
+def admin_edit_user(user_id):
+    user = db.session.get(User, user_id)
+    if user is None:
+        flash("User not found.", "error")
+        return redirect(url_for("admin_panel"))
+
+    if user.is_admin:
+        flash("Admin credentials are managed via environment variables.", "error")
+        return redirect(url_for("admin_panel"))
+
+    username = request.form.get("username", "").strip()
+    email = request.form.get("email", "").strip().lower()
+    new_password = request.form.get("password", "").strip()
+
+    error = None
+    if not username or len(username) < 3:
+        error = "Username must be at least 3 characters."
+    elif len(username) > 50:
+        error = "Username too long (max 50 chars)."
+    elif not email or "@" not in email:
+        error = "Invalid email address."
+    elif User.query.filter(User.username == username, User.id != user_id).first():
+        error = "Username already taken."
+    elif User.query.filter(User.email == email, User.id != user_id).first():
+        error = "Email already registered."
+    elif new_password and len(new_password) < 6:
+        error = "Password must be at least 6 characters."
+
+    if error:
+        flash(error, "error")
+    else:
+        user.username = username
+        user.email = email
+        if new_password:
+            user.set_password(new_password)
+        db.session.commit()
+        flash(f'User "{username}" updated.', "success")
+
+    return redirect(url_for("admin_panel"))
+
+
+@app.route("/admin/user/<int:user_id>/delete", methods=["POST"])
+@login_required
+@admin_required
+def admin_delete_user(user_id):
+    user = db.session.get(User, user_id)
+    if user is None:
+        flash("User not found.", "error")
+        return redirect(url_for("admin_panel"))
+
+    if user.is_admin:
+        flash("Admin account is managed via environment variables.", "error")
+        return redirect(url_for("admin_panel"))
+
+    username = user.username
+    # Cascade: delete owned projects (tasks/members cascade via DB), then memberships
+    for project in list(user.owned_projects):
+        db.session.delete(project)
+    ProjectMember.query.filter_by(user_id=user_id).delete()
+    db.session.delete(user)
+    db.session.commit()
+    flash(f'User "{username}" deleted.', "success")
+    return redirect(url_for("admin_panel"))
+
+
+# ---------------------------------------------------------------------------
+# Startup — DB init + admin sync (runs under both `python app.py` and gunicorn)
+# ---------------------------------------------------------------------------
+
+with app.app_context():
+    db.create_all()
+    # Migrate existing DBs that predate the is_admin column
+    with db.engine.connect() as _conn:
+        try:
+            _conn.execute(db.text("ALTER TABLE user ADD COLUMN is_admin BOOLEAN NOT NULL DEFAULT 0"))
+            _conn.commit()
+        except Exception:
+            pass
+    _sync_admin_user()
+
+# ---------------------------------------------------------------------------
 # Run
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()
     app.run(debug=True, threaded=True, host="0.0.0.0", port=8080)

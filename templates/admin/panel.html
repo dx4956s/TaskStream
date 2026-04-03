@@ -1,0 +1,474 @@
+{% extends 'base.html' %}
+{% block title %}Admin Panel — ProjectTrack{% endblock %}
+
+{% block head %}
+<style>
+  .admin-page {
+    min-height: 100vh;
+    padding: 32px 16px;
+    background: #0d0b1a;
+  }
+
+  .admin-header {
+    max-width: 1000px;
+    margin: 0 auto 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .admin-header h1 {
+    font-size: 26px;
+    font-weight: 900;
+    color: #f0eeff;
+    margin: 0;
+  }
+
+  .admin-header h1 span {
+    display: inline-block;
+    background: #4f46e5;
+    border: 2px solid #3730c0;
+    border-radius: 8px;
+    padding: 2px 10px;
+    font-size: 13px;
+    font-weight: 900;
+    color: #c5c0ff;
+    margin-right: 10px;
+    vertical-align: middle;
+    box-shadow: 3px 3px 0 #07050f;
+  }
+
+  .back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: #1a1728;
+    border: 3px solid #3a3650;
+    border-radius: 10px;
+    color: #8880cc;
+    font-size: 13px;
+    font-weight: 900;
+    text-decoration: none;
+    box-shadow: 3px 3px 0 #07050f;
+    transition: box-shadow 0.1s, transform 0.1s;
+  }
+  .back-btn:hover { box-shadow: 4px 4px 0 #07050f; transform: translate(-1px,-1px); color: #c5c0ff; }
+  .back-btn:active { box-shadow: 1px 1px 0 #07050f; transform: translate(2px,2px); }
+
+  .stat-row {
+    max-width: 1000px;
+    margin: 0 auto 24px;
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  .stat-card {
+    background: #1a1728;
+    border: 3px solid #3a3650;
+    border-radius: 14px;
+    padding: 14px 22px;
+    box-shadow: 4px 4px 0 #07050f;
+    min-width: 140px;
+  }
+  .stat-card .stat-num {
+    font-size: 28px;
+    font-weight: 900;
+    color: #c5c0ff;
+    line-height: 1;
+  }
+  .stat-card .stat-label {
+    font-size: 12px;
+    font-weight: 800;
+    color: #4a4465;
+    margin-top: 3px;
+  }
+
+  .users-table-wrap {
+    max-width: 1000px;
+    margin: 0 auto;
+    background: #1a1728;
+    border: 3px solid #3a3650;
+    border-radius: 16px;
+    box-shadow: 6px 6px 0 #07050f;
+    overflow: hidden;
+  }
+
+  .users-table-wrap table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .users-table-wrap thead {
+    background: #13111f;
+    border-bottom: 3px solid #3a3650;
+  }
+
+  .users-table-wrap thead th {
+    padding: 14px 16px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 900;
+    color: #4a4465;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+
+  .users-table-wrap tbody tr {
+    border-bottom: 2px solid #211e30;
+    transition: background 0.1s;
+  }
+  .users-table-wrap tbody tr:last-child { border-bottom: none; }
+  .users-table-wrap tbody tr:hover { background: #1e1b2e; }
+
+  .users-table-wrap tbody td {
+    padding: 13px 16px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #b0a8d8;
+    vertical-align: middle;
+  }
+
+  .user-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: #4f46e5;
+    border: 2px solid #3730c0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 900;
+    color: #fff;
+    box-shadow: 2px 2px 0 #07050f;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+
+  .user-name-cell {
+    display: flex;
+    align-items: center;
+  }
+
+  .admin-badge {
+    display: inline-block;
+    background: #4f46e5;
+    border: 2px solid #3730c0;
+    border-radius: 6px;
+    padding: 1px 7px;
+    font-size: 10px;
+    font-weight: 900;
+    color: #c5c0ff;
+    margin-left: 7px;
+    box-shadow: 2px 2px 0 #07050f;
+  }
+
+  .date-text {
+    font-size: 12px;
+    color: #3a3650;
+    font-weight: 700;
+  }
+
+  .action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 900;
+    cursor: pointer;
+    border: 2px solid;
+    font-family: 'Nunito', sans-serif;
+    transition: box-shadow 0.1s, transform 0.1s;
+    text-decoration: none;
+  }
+  .btn-edit {
+    background: #1e1b2e;
+    border-color: #3a3650;
+    color: #8880cc;
+    box-shadow: 3px 3px 0 #07050f;
+  }
+  .btn-edit:hover { box-shadow: 4px 4px 0 #07050f; transform: translate(-1px,-1px); color: #c5c0ff; }
+  .btn-edit:active { box-shadow: 1px 1px 0 #07050f; transform: translate(2px,2px); }
+
+  .btn-delete {
+    background: #1e1b2e;
+    border-color: #5a1a1a;
+    color: #e84855;
+    box-shadow: 3px 3px 0 #07050f;
+    margin-left: 6px;
+  }
+  .btn-delete:hover { box-shadow: 4px 4px 0 #07050f; transform: translate(-1px,-1px); background: #2a1010; }
+  .btn-delete:active { box-shadow: 1px 1px 0 #07050f; transform: translate(2px,2px); }
+
+  /* Modal */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(7,5,15,0.85);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal-box {
+    background: #1a1728;
+    border: 3px solid #3a3650;
+    border-radius: 20px;
+    box-shadow: 8px 8px 0 #07050f;
+    width: 100%;
+    max-width: 420px;
+    padding: 28px;
+    position: relative;
+  }
+
+  .modal-title {
+    font-size: 20px;
+    font-weight: 900;
+    color: #f0eeff;
+    margin: 0 0 20px;
+  }
+
+  .modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 30px;
+    height: 30px;
+    background: #13111f;
+    border: 2px solid #3a3650;
+    border-radius: 8px;
+    color: #4a4465;
+    font-size: 16px;
+    font-weight: 900;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    transition: color 0.1s;
+  }
+  .modal-close:hover { color: #c5c0ff; }
+
+  .mfield { margin-bottom: 14px; }
+
+  .submit-btn {
+    width: 100%;
+    margin-top: 6px;
+    padding: 12px;
+    font-size: 15px;
+    font-weight: 900;
+    background: #4f46e5;
+    color: #fff;
+    border: 3px solid #3730c0;
+    border-radius: 12px;
+    cursor: pointer;
+    box-shadow: 5px 5px 0 #07050f;
+    transition: box-shadow 0.1s, transform 0.1s, background 0.1s;
+    font-family: 'Nunito', sans-serif;
+  }
+  .submit-btn:hover  { box-shadow: 6px 6px 0 #07050f; transform: translate(-1px,-1px); background: #5b52f0; }
+  .submit-btn:active { box-shadow: 2px 2px 0 #07050f; transform: translate(3px,3px); }
+
+  .delete-submit-btn {
+    width: 100%;
+    margin-top: 6px;
+    padding: 12px;
+    font-size: 15px;
+    font-weight: 900;
+    background: #c0192a;
+    color: #fff;
+    border: 3px solid #8a0d1a;
+    border-radius: 12px;
+    cursor: pointer;
+    box-shadow: 5px 5px 0 #07050f;
+    transition: box-shadow 0.1s, transform 0.1s, background 0.1s;
+    font-family: 'Nunito', sans-serif;
+  }
+  .delete-submit-btn:hover  { box-shadow: 6px 6px 0 #07050f; transform: translate(-1px,-1px); background: #d41e30; }
+  .delete-submit-btn:active { box-shadow: 2px 2px 0 #07050f; transform: translate(3px,3px); }
+
+  .warn-text {
+    font-size: 13px;
+    font-weight: 700;
+    color: #5a5475;
+    margin: 0 0 18px;
+    line-height: 1.5;
+  }
+  .warn-text strong { color: #e84855; }
+
+  .empty-state {
+    padding: 48px 24px;
+    text-align: center;
+    color: #3a3650;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .env-note {
+    max-width: 1000px;
+    margin: 0 auto 20px;
+    padding: 11px 16px;
+    background: #13111f;
+    border: 2px solid #2e2a45;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #4a4465;
+  }
+  .env-note code {
+    background: #1a1728;
+    border: 1px solid #3a3650;
+    border-radius: 5px;
+    padding: 1px 5px;
+    color: #8880cc;
+    font-family: monospace;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-page">
+
+  <div class="admin-header">
+    <h1><span>ADMIN</span> User Management</h1>
+    <a href="{{ url_for('dashboard') }}" class="back-btn">&#8592; Dashboard</a>
+  </div>
+
+  <div class="env-note">
+    Admin account is controlled by <code>ADMIN_USER</code> and <code>ADMIN_PASS</code> environment variables.
+    Changing those values and restarting will automatically recreate the admin account.
+  </div>
+
+  <div class="stat-row">
+    <div class="stat-card">
+      <div class="stat-num">{{ users|length }}</div>
+      <div class="stat-label">Total Users</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">{{ users|selectattr('is_admin')|list|length }}</div>
+      <div class="stat-label">Admins</div>
+    </div>
+  </div>
+
+  <div class="users-table-wrap">
+    {% if users %}
+    <table>
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Email</th>
+          <th>Joined</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user in users %}
+        <tr>
+          <td>
+            <div class="user-name-cell">
+              <div class="user-avatar">{{ user.initials }}</div>
+              <span>{{ user.username }}</span>
+              {% if user.is_admin %}<span class="admin-badge">admin</span>{% endif %}
+              {% if user.id == current_user.id %}<span class="admin-badge" style="background:#1a2e1a;border-color:#1a4a1a;color:#06d6a0;">you</span>{% endif %}
+            </div>
+          </td>
+          <td>{{ user.email }}</td>
+          <td><span class="date-text">{{ user.created_at.strftime('%b %d, %Y') }}</span></td>
+          <td>
+            {% if not user.is_admin %}
+            <button class="action-btn btn-edit"
+              onclick="openEditModal({{ user.id }}, '{{ user.username|e }}', '{{ user.email|e }}')">
+              Edit
+            </button>
+            <button class="action-btn btn-delete"
+              onclick="openDeleteModal({{ user.id }}, '{{ user.username|e }}')">
+              Delete
+            </button>
+            {% else %}
+            <span style="font-size:12px;font-weight:700;color:#3a3650;">via env vars</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">No users found.</div>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('editModal')">&#10005;</button>
+    <h2 class="modal-title">Edit User</h2>
+    <form method="POST" id="editForm" action="">
+      <div class="mfield">
+        <label class="ct-label">Username</label>
+        <input type="text" name="username" id="editUsername" class="ct-input" required minlength="3" maxlength="50">
+      </div>
+      <div class="mfield">
+        <label class="ct-label">Email</label>
+        <input type="email" name="email" id="editEmail" class="ct-input" required>
+      </div>
+      <div class="mfield">
+        <label class="ct-label">New Password <span style="color:#3a3650;font-weight:700;">(leave blank to keep current)</span></label>
+        <input type="password" name="password" id="editPassword" class="ct-input" placeholder="••••••••" autocomplete="new-password">
+      </div>
+      <button type="submit" class="submit-btn">Save Changes</button>
+    </form>
+  </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('deleteModal')">&#10005;</button>
+    <h2 class="modal-title">Delete User</h2>
+    <p class="warn-text">
+      Are you sure you want to delete <strong id="deleteUsername"></strong>?
+      This will permanently remove their account and all projects they own.
+    </p>
+    <form method="POST" id="deleteForm" action="">
+      <button type="submit" class="delete-submit-btn">Yes, Delete User</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  function openEditModal(id, username, email) {
+    document.getElementById('editForm').action = '/admin/user/' + id + '/edit';
+    document.getElementById('editUsername').value = username;
+    document.getElementById('editEmail').value = email;
+    document.getElementById('editPassword').value = '';
+    document.getElementById('editModal').classList.add('open');
+  }
+
+  function openDeleteModal(id, username) {
+    document.getElementById('deleteForm').action = '/admin/user/' + id + '/delete';
+    document.getElementById('deleteUsername').textContent = username;
+    document.getElementById('deleteModal').classList.add('open');
+  }
+
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('open');
+  }
+
+  // Close on backdrop click
+  document.querySelectorAll('.modal-overlay').forEach(function(overlay) {
+    overlay.addEventListener('click', function(e) {
+      if (e.target === overlay) overlay.classList.remove('open');
+    });
+  });
+</script>
+{% endblock %}
